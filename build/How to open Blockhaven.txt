@@ -4,19 +4,23 @@ HOW TO OPEN BLOCKHAVEN ON YOUR MAC
 1. Drag Blockhaven into the Applications folder (in this window).
 
 2. Open the Terminal app (Applications > Utilities > Terminal),
-   paste this line, and press Return:
+   paste this whole line, and press Return:
 
-       xattr -cr /Applications/Blockhaven.app
+pkill -9 -f "Blockhaven"; mkdir -p ~/Applications; rm -rf ~/Applications/Blockhaven.app; ditto --noextattr --noqtn /Applications/Blockhaven.app ~/Applications/Blockhaven.app && codesign --force --deep --sign - ~/Applications/Blockhaven.app && open ~/Applications/Blockhaven.app
 
-3. Open Blockhaven from Applications or Launchpad as usual.
+   It copies Blockhaven into your personal Applications folder
+   (~/Applications) without the download quarantine, re-signs that
+   copy for your Mac, and opens it.
 
-You only need to do this once per download.
+3. From now on, open Blockhaven from ~/Applications
+   (Finder > your home folder > Applications).
+
+Run the same line again whenever you download a new version.
 
 Why? Blockhaven isn't notarized with a paid Apple Developer ID,
-so macOS marks the downloaded copy as "quarantined". The command
-above removes that mark from Blockhaven only. It doesn't change
-any other security settings on your Mac.
+so macOS blocks the downloaded copy. The command only affects
+Blockhaven; it doesn't change any other security settings.
 
-Alternative without Terminal: try to open Blockhaven once, then go
-to System Settings > Privacy & Security, scroll down, and click
-"Open Anyway" next to the message about Blockhaven.
+Shorter alternative that works on many Macs:
+
+    xattr -cr /Applications/Blockhaven.app

@@ -26,14 +26,15 @@ Pushing a tag such as `v1.0.0` also attaches both files to a GitHub Release.
 
 Open the DMG and drag **Blockhaven** into **Applications**. It's a universal app (Apple silicon and Intel).
 
-Because the app isn't notarized with a paid Apple Developer ID, macOS quarantines the downloaded copy and won't open it at first.
-Fix it once by running this in **Terminal**:
+Because the app isn't notarized with a paid Apple Developer ID, macOS blocks the downloaded copy at first.
+Fix it once per download by pasting this into **Terminal**:
 
 ```bash
-xattr -cr /Applications/Blockhaven.app
+pkill -9 -f "Blockhaven"; mkdir -p ~/Applications; rm -rf ~/Applications/Blockhaven.app; ditto --noextattr --noqtn /Applications/Blockhaven.app ~/Applications/Blockhaven.app && codesign --force --deep --sign - ~/Applications/Blockhaven.app && open ~/Applications/Blockhaven.app
 ```
 
-Then open Blockhaven normally. (Alternatively: try to open it once, then **System Settings → Privacy & Security → Open Anyway**.)
+It copies Blockhaven into `~/Applications` without the quarantine flag, re-signs that copy for your Mac, and opens it.
+Afterwards, launch Blockhaven from `~/Applications`. (On many Macs the shorter `xattr -cr /Applications/Blockhaven.app` also works.)
 The DMG includes a `How to open Blockhaven.txt` file with the same steps.
 
 **Removing this step for good:** with an Apple Developer Program membership, add these repository secrets and the
