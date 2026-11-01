@@ -1,0 +1,338 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Blockhaven Launcher</title>
+<link rel="icon" href="icon.png">
+<style>
+  @font-face { font-family: "Pixel"; src: url("fonts/press-start-2p.woff2") format("woff2"); font-display: swap; }
+  :root {
+    --bg: #0f1720;
+    --panel: rgba(16, 21, 30, 0.88);
+    --panel-2: rgba(255, 255, 255, 0.05);
+    --border: rgba(255, 255, 255, 0.12);
+    --text: #f2f4f8;
+    --muted: #a3adbd;
+    --accent: #7fd47a;
+    --accent-strong: #3b8f3a;
+    --survival: #e0a84a;
+    --creative: #6fb2ff;
+    --danger: #c94a46;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; overflow: hidden; }
+  #bg { position: fixed; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; }
+  .shell { position: relative; height: 100%; display: grid; grid-template-columns: minmax(280px, 340px) 1fr; gap: 24px; padding: 28px; }
+  .side { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 24px; display: flex; flex-direction: column; gap: 18px;
+    backdrop-filter: blur(6px); }
+  .brand { display: flex; align-items: center; gap: 14px; }
+  .brand img { width: 56px; height: 56px; image-rendering: pixelated; border-radius: 10px; }
+  .brand h1 { font-family: "Pixel", monospace; font-size: 18px; margin: 0; color: var(--accent); text-shadow: 2px 2px 0 #1d4d1b; }
+  .brand small { color: var(--muted); font-size: 12px; display: block; margin-top: 6px; }
+  nav { display: flex; flex-direction: column; gap: 6px; }
+  nav button { text-align: left; background: transparent; border: 1px solid transparent; color: var(--muted); padding: 10px 12px; font-size: 15px; }
+  nav button.active { background: var(--panel-2); color: var(--text); border-color: var(--border); }
+  .spacer { flex: 1; }
+  .play-big { font-family: "Pixel", monospace; font-size: 16px; padding: 18px; letter-spacing: 1px; }
+  .selected-world { font-size: 13px; color: var(--muted); text-align: center; min-height: 18px; }
+  .main { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 26px; overflow-y: auto; backdrop-filter: blur(6px); }
+  h2 { font-family: "Pixel", monospace; font-size: 14px; margin: 0 0 18px; letter-spacing: 1px; }
+  h3 { font-size: 14px; margin: 22px 0 10px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .06em; }
+  button { font: inherit; font-weight: 600; font-size: 14px; padding: 10px 16px; border-radius: 7px; cursor: pointer;
+    border: 1px solid rgba(255,255,255,0.18); background: var(--accent-strong); color: #fff; }
+  button:hover:not(:disabled) { filter: brightness(1.12); }
+  button:disabled { opacity: .45; cursor: default; }
+  button.secondary { background: #343c4b; }
+  button.danger { background: var(--danger); }
+  button.ghost { background: transparent; }
+  .toolbar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+  .worlds { display: grid; gap: 10px; }
+  .world { display: grid; grid-template-columns: 52px 1fr auto; gap: 14px; align-items: center; padding: 12px 14px; border-radius: 10px;
+    background: var(--panel-2); border: 2px solid transparent; cursor: pointer; }
+  .world:hover { border-color: rgba(255,255,255,0.15); }
+  .world.sel { border-color: var(--accent); background: rgba(127, 212, 122, 0.08); }
+  .world .thumb { width: 52px; height: 52px; border-radius: 8px; image-rendering: pixelated; }
+  .world .name { font-weight: 700; font-size: 16px; }
+  .world .meta { color: var(--muted); font-size: 12px; margin-top: 4px; }
+  .badge { font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 99px; text-transform: uppercase; letter-spacing: .05em; }
+  .badge.survival { background: rgba(224, 168, 74, 0.18); color: var(--survival); }
+  .badge.creative { background: rgba(111, 178, 255, 0.18); color: var(--creative); }
+  .empty { color: var(--muted); padding: 30px; text-align: center; border: 2px dashed var(--border); border-radius: 10px; }
+  .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+  .field label { font-size: 13px; color: var(--muted); }
+  input[type=text] { font: inherit; padding: 10px 12px; border-radius: 7px; border: 1px solid var(--border); background: rgba(0,0,0,0.3); color: var(--text); }
+  .modes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .mode { padding: 14px; border-radius: 10px; border: 2px solid var(--border); background: var(--panel-2); cursor: pointer; }
+  .mode b { display: block; margin-bottom: 4px; }
+  .mode span { color: var(--muted); font-size: 13px; line-height: 1.4; }
+  .mode.sel.survival { border-color: var(--survival); }
+  .mode.sel.creative { border-color: var(--creative); }
+  .setting { display: grid; grid-template-columns: 170px 1fr 60px; gap: 12px; align-items: center; margin-bottom: 14px; font-size: 14px; }
+  .setting b { text-align: right; }
+  .keys { display: grid; grid-template-columns: auto 1fr; gap: 8px 16px; font-size: 14px; }
+  kbd { font: 12px ui-monospace, monospace; background: #2a3140; border: 1px solid #455066; border-bottom-width: 3px; border-radius: 4px; padding: 2px 7px; white-space: nowrap; }
+  p { color: var(--muted); line-height: 1.55; font-size: 14px; }
+  .dialog { position: fixed; inset: 0; display: grid; place-items: center; background: rgba(0,0,0,0.55); padding: 16px; z-index: 10; }
+  .dialog .box { background: #161c27; border: 1px solid var(--border); border-radius: 12px; padding: 24px; width: 100%; max-width: 520px; }
+  .row { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
+  .hidden { display: none !important; }
+  @media (max-width: 760px) {
+    html, body { overflow: auto; }
+    .shell { grid-template-columns: 1fr; padding: 16px; height: auto; min-height: 100%; }
+    .modes { grid-template-columns: 1fr; }
+    .setting { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<canvas id="bg"></canvas>
+<div class="shell">
+  <aside class="side">
+    <div class="brand">
+      <img src="icon.png" alt="">
+      <div><h1>BLOCKHAVEN</h1><small id="version">Launcher</small></div>
+    </div>
+    <nav>
+      <button data-tab="worlds" class="active">Worlds</button>
+      <button data-tab="settings">Settings</button>
+      <button data-tab="help">How to play</button>
+    </nav>
+    <div class="spacer"></div>
+    <div class="selected-world" id="selected-label"></div>
+    <button class="play-big" id="play" disabled>PLAY</button>
+    <button class="secondary hidden" id="quit-app">Quit</button>
+  </aside>
+
+  <main class="main">
+    <section id="tab-worlds">
+      <h2>WORLDS</h2>
+      <div class="toolbar">
+        <button id="new-world">+ Create new world</button>
+        <button class="secondary" id="rename" disabled>Rename</button>
+        <button class="danger" id="delete" disabled>Delete</button>
+      </div>
+      <div class="worlds" id="world-list"></div>
+    </section>
+
+    <section id="tab-settings" class="hidden">
+      <h2>SETTINGS</h2>
+      <label class="setting">Render distance <input id="s-rd" type="range" min="3" max="12"><b id="s-rdv"></b></label>
+      <label class="setting">Mouse sensitivity <input id="s-sens" type="range" min="0.2" max="3" step="0.1"><b id="s-sensv"></b></label>
+      <label class="setting">Field of view <input id="s-fov" type="range" min="55" max="105"><b id="s-fovv"></b></label>
+      <div id="desktop-settings" class="hidden">
+        <h3>Window</h3>
+        <button class="secondary" id="fullscreen">Toggle fullscreen</button>
+      </div>
+      <p>Lower the render distance if the game feels slow. Settings apply to every world.</p>
+    </section>
+
+    <section id="tab-help" class="hidden">
+      <h2>HOW TO PLAY</h2>
+      <div class="keys">
+        <kbd>W A S D</kbd><span>Move</span>
+        <kbd>Mouse</kbd><span>Look around</span>
+        <kbd>Space</kbd><span>Jump, swim up, or fly up</span>
+        <kbd>Shift</kbd><span>Sprint (fly down while flying)</span>
+        <kbd>Left click</kbd><span>Break a block (hold it in Survival)</span>
+        <kbd>Right click</kbd><span>Place the block in your hand</span>
+        <kbd>Middle click</kbd><span>Pick the block you're looking at</span>
+        <kbd>E</kbd><span>Open inventory and crafting</span>
+        <kbd>1–9 / Wheel</kbd><span>Choose hotbar slot</span>
+        <kbd>F</kbd><span>Toggle flying (Creative only)</span>
+        <kbd>T</kbd><span>Skip ahead in time</span>
+        <kbd>F3</kbd><span>Debug info</span>
+        <kbd>Esc</kbd><span>Pause, change mode, or quit to the launcher</span>
+      </div>
+      <h3>Survival</h3>
+      <p>You start with nothing. Hold left click to dig: trees give logs, stone gives cobblestone, grass gives dirt.
+        Open your inventory with <kbd>E</kbd> to craft planks, smooth stone, stone bricks, glass and bricks.
+        Watch your hearts: long falls hurt and you can run out of air underwater. Health slowly comes back when you avoid damage.</p>
+      <h3>Creative</h3>
+      <p>Every block is unlimited and breaks instantly. Press <kbd>F</kbd> to fly. Grab any block from the creative inventory with <kbd>E</kbd>.</p>
+      <p>You can switch a world between modes at any time from the pause menu.</p>
+    </section>
+  </main>
+</div>
+
+<div class="dialog hidden" id="create-dialog">
+  <form class="box" id="create-form">
+    <h2>CREATE WORLD</h2>
+    <div class="field"><label for="w-name">World name</label><input type="text" id="w-name" maxlength="40" placeholder="New World"></div>
+    <div class="field"><label>Game mode</label>
+      <div class="modes">
+        <div class="mode survival sel" data-mode="survival"><b>Survival</b><span>Gather resources, craft blocks, and stay alive.</span></div>
+        <div class="mode creative" data-mode="creative"><b>Creative</b><span>Unlimited blocks, instant breaking, and flying.</span></div>
+      </div>
+    </div>
+    <div class="field"><label for="w-seed">Seed (optional: words or numbers)</label><input type="text" id="w-seed" maxlength="40" placeholder="Leave blank for a random world"></div>
+    <div class="row">
+      <button type="button" class="secondary" id="create-cancel">Cancel</button>
+      <button type="submit">Create &amp; play</button>
+    </div>
+  </form>
+</div>
+
+<script src="storage.js"></script>
+<script>
+'use strict';
+const Store = window.BlockhavenStore;
+const desktopApi = window.desktop || null;
+const $ = id => document.getElementById(id);
+
+// ------------------------------------------------ animated pixel landscape background
+const bg = $('bg'), bctx = bg.getContext('2d');
+const PIX = 6;
+let cols = 0, rows = 0, hills = [], cloudsBg = [];
+function ridge(seed, len, base, amp, freq) {
+  const out = [];
+  for (let x = 0; x < len; x++) {
+    const v = Math.sin(x * freq + seed) * 0.5 + Math.sin(x * freq * 2.3 + seed * 1.7) * 0.3 + Math.sin(x * freq * 5.1 + seed * 3.1) * 0.2;
+    out.push(Math.round(base + v * amp));
+  }
+  return out;
+}
+function setupBg() {
+  bg.width = Math.ceil(innerWidth / PIX); bg.height = Math.ceil(innerHeight / PIX);
+  cols = bg.width; rows = bg.height;
+  const L = cols * 3;
+  hills = [
+    { h: ridge(1.3, L, rows * 0.42, rows * 0.10, 0.045), color: '#5b7fa8', speed: 0.6 },
+    { h: ridge(4.1, L, rows * 0.55, rows * 0.08, 0.06), color: '#3f7a4a', speed: 1.2, top: '#58a35c' },
+    { h: ridge(8.7, L, rows * 0.70, rows * 0.06, 0.09), color: '#6b4a32', speed: 2.2, top: '#62b158', topH: 2 },
+  ];
+  cloudsBg = Array.from({ length: 7 }, (_, i) => ({ x: Math.random() * cols * 1.5, y: 4 + Math.random() * rows * 0.25, w: 8 + Math.random() * 16, s: 0.5 + Math.random() * 0.6 }));
+}
+let t0 = performance.now();
+function drawBg(now) {
+  const t = (now - t0) / 1000;
+  const g = bctx.createLinearGradient(0, 0, 0, rows);
+  g.addColorStop(0, '#5ea6f0'); g.addColorStop(0.7, '#a9d6ff'); g.addColorStop(1, '#cfe8ff');
+  bctx.fillStyle = g; bctx.fillRect(0, 0, cols, rows);
+  bctx.fillStyle = '#fff6c9'; bctx.fillRect(Math.floor(cols * 0.78), Math.floor(rows * 0.12), 8, 8);
+  bctx.fillStyle = 'rgba(255,255,255,0.9)';
+  for (const c of cloudsBg) {
+    const x = Math.floor(((c.x + t * c.s) % (cols + 40)) - 30);
+    bctx.fillRect(x, Math.floor(c.y), Math.floor(c.w), 3);
+    bctx.fillRect(x + 3, Math.floor(c.y) - 2, Math.floor(c.w * 0.5), 2);
+  }
+  for (const layer of hills) {
+    const off = Math.floor(t * layer.speed) % (layer.h.length - cols);
+    for (let x = 0; x < cols; x++) {
+      const h = layer.h[x + off];
+      bctx.fillStyle = layer.color; bctx.fillRect(x, h, 1, rows - h);
+      if (layer.top) { bctx.fillStyle = layer.top; bctx.fillRect(x, h, 1, layer.topH || 1); }
+    }
+  }
+  bctx.fillStyle = 'rgba(10,15,25,0.35)'; bctx.fillRect(0, 0, cols, rows);
+  requestAnimationFrame(drawBg);
+}
+addEventListener('resize', setupBg);
+setupBg(); requestAnimationFrame(drawBg);
+
+// ------------------------------------------------ tabs
+document.querySelectorAll('nav button').forEach(b => b.onclick = () => {
+  document.querySelectorAll('nav button').forEach(x => x.classList.toggle('active', x === b));
+  for (const t of ['worlds', 'settings', 'help']) $('tab-' + t).classList.toggle('hidden', t !== b.dataset.tab);
+});
+
+// ------------------------------------------------ worlds
+let selectedId = null;
+function thumb(seed) {
+  // tiny landscape preview unique to each world seed
+  const c = document.createElement('canvas'); c.width = c.height = 13;
+  const x = c.getContext('2d');
+  let s = (seed >>> 0) || 1; const r = () => { s = (s ^ (s << 13)) >>> 0; s = (s ^ (s >>> 17)) >>> 0; s = (s ^ (s << 5)) >>> 0; return s / 4294967296; };
+  x.fillStyle = '#8ec5ff'; x.fillRect(0, 0, 13, 13);
+  let h = 6 + Math.floor(r() * 3);
+  for (let i = 0; i < 13; i++) {
+    h = Math.max(4, Math.min(10, h + Math.round((r() - 0.5) * 2.4)));
+    const water = h > 8;
+    x.fillStyle = water ? '#3b6fd0' : '#62b158'; x.fillRect(i, water ? 9 : h, 1, 1);
+    x.fillStyle = '#7a5638'; x.fillRect(i, (water ? 9 : h) + 1, 1, 13);
+    if (!water && r() < 0.15) { x.fillStyle = '#3d8a3a'; x.fillRect(i, h - 3, 1, 2); }
+  }
+  return c.toDataURL();
+}
+function ago(ts) {
+  const s = (Date.now() - ts) / 1000;
+  if (s < 60) return 'just now';
+  if (s < 3600) return Math.floor(s / 60) + ' min ago';
+  if (s < 86400) return Math.floor(s / 3600) + ' h ago';
+  return new Date(ts).toLocaleDateString();
+}
+function renderWorlds() {
+  const list = Store.listWorlds(), el = $('world-list');
+  if (!list.find(w => w.id === selectedId)) selectedId = list.length ? list[0].id : null;
+  el.innerHTML = '';
+  if (!list.length) el.innerHTML = '<div class="empty">No worlds yet. Create one to start playing.</div>';
+  for (const w of list) {
+    const row = document.createElement('div');
+    row.className = 'world' + (w.id === selectedId ? ' sel' : '');
+    row.innerHTML = `<img class="thumb" alt=""><div><div class="name"></div><div class="meta"></div></div><span class="badge ${w.mode}">${w.mode}</span>`;
+    row.querySelector('img').src = thumb(w.seed);
+    row.querySelector('.name').textContent = w.name;
+    row.querySelector('.meta').textContent = `Last played ${ago(w.lastPlayed)} · Seed ${w.seed}`;
+    row.onclick = () => { selectedId = w.id; renderWorlds(); };
+    row.ondblclick = () => play(w.id);
+    el.append(row);
+  }
+  const sel = list.find(w => w.id === selectedId);
+  $('play').disabled = !sel; $('delete').disabled = !sel; $('rename').disabled = !sel;
+  $('selected-label').textContent = sel ? `${sel.name} · ${sel.mode}` : 'Create a world to begin';
+}
+function play(id) { location.href = 'game.html?world=' + encodeURIComponent(id); }
+$('play').onclick = () => selectedId && play(selectedId);
+$('delete').onclick = () => {
+  const w = Store.getWorld(selectedId);
+  if (w && confirm(`Delete "${w.name}"? This can't be undone.`)) { Store.deleteWorld(w.id); selectedId = null; renderWorlds(); }
+};
+$('rename').onclick = () => {
+  const w = Store.getWorld(selectedId); if (!w) return;
+  const name = prompt('Rename world', w.name);
+  if (name && name.trim()) { Store.updateWorld(w.id, { name: name.trim().slice(0, 40) }); renderWorlds(); }
+};
+
+// create dialog
+let newMode = 'survival';
+document.querySelectorAll('.mode').forEach(m => m.onclick = () => {
+  newMode = m.dataset.mode;
+  document.querySelectorAll('.mode').forEach(x => x.classList.toggle('sel', x === m));
+});
+$('new-world').onclick = () => {
+  $('w-name').value = ''; $('w-seed').value = '';
+  $('create-dialog').classList.remove('hidden'); $('w-name').focus();
+};
+$('create-cancel').onclick = () => $('create-dialog').classList.add('hidden');
+$('create-form').onsubmit = e => {
+  e.preventDefault();
+  const w = Store.createWorld({ name: $('w-name').value, mode: newMode, seed: $('w-seed').value });
+  play(w.id);
+};
+addEventListener('keydown', e => { if (e.key === 'Escape') $('create-dialog').classList.add('hidden'); });
+
+// ------------------------------------------------ settings
+const settings = Store.getSettings();
+function bind(id, key, fmt) {
+  const input = $(id), out = $(id + 'v');
+  input.value = settings[key]; out.textContent = fmt(settings[key]);
+  input.oninput = () => { settings[key] = +input.value; out.textContent = fmt(settings[key]); Store.setSettings({ [key]: settings[key] }); };
+}
+bind('s-rd', 'rd', v => v + ' chunks');
+bind('s-sens', 'sens', v => v.toFixed(1));
+bind('s-fov', 'fov', v => v + '°');
+
+// ------------------------------------------------ desktop integration
+if (desktopApi) {
+  $('desktop-settings').classList.remove('hidden');
+  $('quit-app').classList.remove('hidden');
+  $('fullscreen').onclick = () => desktopApi.toggleFullscreen();
+  $('quit-app').onclick = () => desktopApi.quit();
+  desktopApi.getInfo().then(i => { $('version').textContent = `Version ${i.version} · ${i.platform === 'darwin' ? 'macOS' : i.platform === 'win32' ? 'Windows' : i.platform}`; });
+} else $('version').textContent = 'Browser edition';
+
+renderWorlds();
+</script>
+</body>
+</html>

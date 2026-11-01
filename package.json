@@ -1,0 +1,80 @@
+{
+  "name": "blockhaven",
+  "productName": "Blockhaven",
+  "version": "1.0.0",
+  "description": "Blockhaven, an original voxel sandbox game",
+  "private": true,
+  "main": "electron/main.js",
+  "author": {
+    "name": "Blockhaven"
+  },
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --publish never",
+    "dist:mac": "electron-builder --mac --publish never",
+    "dist:win": "electron-builder --win --publish never"
+  },
+  "devDependencies": {
+    "electron": "44.10.1",
+    "electron-builder": "26.17.0"
+  },
+  "build": {
+    "appId": "com.blockhaven.game",
+    "productName": "Blockhaven",
+    "copyright": "Copyright \u00a9 2026 Blockhaven",
+    "directories": {
+      "buildResources": "build",
+      "output": "dist"
+    },
+    "files": [
+      "electron/**",
+      "app/**",
+      "package.json"
+    ],
+    "mac": {
+      "category": "public.app-category.games",
+      "icon": "build/icon.png",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "universal"
+          ]
+        }
+      ],
+      "identity": "-",
+      "hardenedRuntime": false
+    },
+    "dmg": {
+      "title": "Blockhaven ${version}",
+      "artifactName": "Blockhaven-${version}-mac.dmg"
+    },
+    "win": {
+      "icon": "build/icon.png",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Blockhaven",
+      "artifactName": "Blockhaven-Setup-${version}.exe"
+    },
+    "linux": {
+      "icon": "build/icon.png",
+      "target": [
+        "AppImage"
+      ],
+      "category": "Game"
+    }
+  }
+}
