@@ -82,7 +82,7 @@ To play in a browser instead, serve the `app/` folder with any static web server
 - `app/storage.js`: world and settings saves (shared by both pages)
 - `electron/`: desktop app shell
 - `build/icon.png`: app icon used for the Mac and Windows builds
-- `electron-builder.js`: packaging, signing and installer settings
+- `electron-builder.cjs`: packaging, signing and installer settings
 - `.github/workflows/build-desktop.yml`: builds the DMG and Windows installer, then installs and launches each one and runs `scripts/smoke-test.mjs` against it
 
 Third-party: [three.js](https://threejs.org) r128 (MIT, `app/vendor/`) and the Press Start 2P font (SIL OFL, `app/fonts/`).
