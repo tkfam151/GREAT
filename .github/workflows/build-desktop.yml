@@ -28,6 +28,8 @@ jobs:
             script: dist:win
             artifact: Blockhaven-Windows
             files: dist/Blockhaven-Setup-*.exe
+    env:
+      HAS_MAC_CERT: ${{ secrets.MAC_CERTS != '' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -39,19 +41,85 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build ${{ matrix.name }}
-        run: npm run ${{ matrix.script }}
+      # Optional: Apple Developer ID signing + notarization, so the Mac app opens without any extra steps.
+      # Add repository secrets MAC_CERTS (base64 .p12 "Developer ID Application" certificate), MAC_CERTS_PASSWORD,
+      # APPLE_ID, APPLE_APP_SPECIFIC_PASSWORD and APPLE_TEAM_ID to enable it. Without them the app is ad-hoc signed.
+      - name: Use Apple Developer ID signing
+        if: runner.os == 'macOS' && env.HAS_MAC_CERT == 'true'
+        shell: bash
         env:
-          # Optional Apple Developer ID signing + notarization. Add these repository secrets to enable it:
-          #   MAC_CERTS (base64 .p12 "Developer ID Application" certificate), MAC_CERTS_PASSWORD,
-          #   APPLE_ID, APPLE_APP_SPECIFIC_PASSWORD, APPLE_TEAM_ID.
-          # Without them the Mac app is ad-hoc signed and the Windows installer is unsigned.
-          CSC_LINK: ${{ matrix.os == 'macos-latest' && secrets.MAC_CERTS || '' }}
-          CSC_KEY_PASSWORD: ${{ matrix.os == 'macos-latest' && secrets.MAC_CERTS_PASSWORD || '' }}
-          CSC_IDENTITY_AUTO_DISCOVERY: ${{ matrix.os == 'macos-latest' && secrets.MAC_CERTS != '' }}
+          MAC_CERTS: ${{ secrets.MAC_CERTS }}
+          MAC_CERTS_PASSWORD: ${{ secrets.MAC_CERTS_PASSWORD }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          {
+            echo "CSC_LINK=$MAC_CERTS"
+            echo "CSC_KEY_PASSWORD=$MAC_CERTS_PASSWORD"
+            echo "APPLE_ID=$APPLE_ID"
+            echo "APPLE_APP_SPECIFIC_PASSWORD=$APPLE_APP_SPECIFIC_PASSWORD"
+            echo "APPLE_TEAM_ID=$APPLE_TEAM_ID"
+          } >> "$GITHUB_ENV"
+
+      - name: Build ${{ matrix.name }}
+        run: npm run ${{ matrix.script }}
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: ${{ env.HAS_MAC_CERT }}
+
+      # ---- Install and launch the real build, then drive it with scripts/smoke-test.mjs ----
+      - name: Install and test the Mac app
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          set -euo pipefail
+          DMG=$(ls dist/Blockhaven-*-mac.dmg)
+          MNT=$(mktemp -d)
+          hdiutil attach "$DMG" -nobrowse -readonly -mountpoint "$MNT"
+          echo "DMG contents:"; ls -la "$MNT"
+          if [ "$HAS_MAC_CERT" != "true" ]; then test -f "$MNT/How to open Blockhaven.txt"; fi
+          ditto "$MNT/Blockhaven.app" /Applications/Blockhaven.app
+          hdiutil detach "$MNT"
+          APP=/Applications/Blockhaven.app
+          echo "Architectures: $(lipo -archs "$APP/Contents/MacOS/Blockhaven")"
+          codesign --verify --deep --strict --verbose=2 "$APP"
+          codesign -dv "$APP" 2>&1 | grep -E "Signature|TeamIdentifier|flags" || true
+          # Simulate a browser download, then apply the documented one-time fix.
+          xattr -w com.apple.quarantine "0083;$(printf %x "$(date +%s)");Safari;" "$APP"
+          xattr -cr "$APP"
+          if xattr -r "$APP" | grep -q com.apple.quarantine; then echo "quarantine still present"; exit 1; fi
+          "$APP/Contents/MacOS/Blockhaven" --remote-debugging-port=9222 --use-angle=swiftshader --enable-unsafe-swiftshader > app.log 2>&1 &
+          PID=$!
+          node scripts/smoke-test.mjs 9222 smoke-screenshots || { echo "--- app log ---"; tail -50 app.log; kill $PID; exit 1; }
+          kill -0 $PID && echo "App still running after the test"
+          kill $PID
+
+      - name: Install and test the Windows app
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $setup = (Get-ChildItem dist\Blockhaven-Setup-*.exe).FullName
+          Start-Process -FilePath $setup -ArgumentList '/S' -Wait
+          $exe = Join-Path $env:LOCALAPPDATA 'Programs\Blockhaven\Blockhaven.exe'
+          if (-not (Test-Path $exe)) { Get-ChildItem (Join-Path $env:LOCALAPPDATA 'Programs') -Recurse -Depth 2 | Select-Object FullName; throw "Blockhaven.exe was not installed to $exe" }
+          Write-Host "Installed to $exe"
+          $shortcut = Join-Path ([Environment]::GetFolderPath('Programs')) 'Blockhaven.lnk'
+          Write-Host "Start menu shortcut present: $(Test-Path $shortcut)"
+          $proc = Start-Process -FilePath $exe -ArgumentList '--remote-debugging-port=9222','--use-angle=swiftshader','--enable-unsafe-swiftshader' -PassThru
+          node scripts/smoke-test.mjs 9222 smoke-screenshots
+          $code = $LASTEXITCODE
+          if (-not $proc.HasExited) { Write-Host "App still running after the test" }
+          Get-Process Blockhaven -ErrorAction SilentlyContinue | Stop-Process -Force
+          exit $code
+
+      - name: Upload smoke-test screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}-screenshots
+          path: smoke-screenshots/
+          if-no-files-found: ignore
 
       - name: Upload build
         uses: actions/upload-artifact@v4
