@@ -25,8 +25,21 @@ Pushing a tag such as `v1.0.0` also attaches both files to a GitHub Release.
 ### macOS
 
 Open the DMG and drag **Blockhaven** into **Applications**. It's a universal app (Apple silicon and Intel).
-The app isn't notarized with a paid Apple Developer ID, so the first time you open it macOS will block it:
-go to **System Settings → Privacy & Security** and click **Open Anyway** (or right-click the app → **Open**).
+
+Because the app isn't notarized with a paid Apple Developer ID, macOS quarantines the downloaded copy and won't open it at first.
+Fix it once by running this in **Terminal**:
+
+```bash
+xattr -cr /Applications/Blockhaven.app
+```
+
+Then open Blockhaven normally. (Alternatively: try to open it once, then **System Settings → Privacy & Security → Open Anyway**.)
+The DMG includes a `How to open Blockhaven.txt` file with the same steps.
+
+**Removing this step for good:** with an Apple Developer Program membership, add these repository secrets and the
+workflow will sign and notarize the app automatically, so it opens with a normal double-click:
+`MAC_CERTS` (base64-encoded "Developer ID Application" `.p12`), `MAC_CERTS_PASSWORD`, `APPLE_ID`,
+`APPLE_APP_SPECIFIC_PASSWORD` (from appleid.apple.com) and `APPLE_TEAM_ID`.
 
 ### Windows
 
@@ -69,6 +82,7 @@ To play in a browser instead, serve the `app/` folder with any static web server
 - `app/storage.js`: world and settings saves (shared by both pages)
 - `electron/`: desktop app shell
 - `build/icon.png`: app icon used for the Mac and Windows builds
+- `electron-builder.config.js`: packaging, signing and installer settings
 - `.github/workflows/build-desktop.yml`: builds the DMG and Windows installer
 
 Third-party: [three.js](https://threejs.org) r128 (MIT, `app/vendor/`) and the Press Start 2P font (SIL OFL, `app/fonts/`).

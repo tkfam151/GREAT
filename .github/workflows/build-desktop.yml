@@ -42,8 +42,16 @@ jobs:
       - name: Build ${{ matrix.name }}
         run: npm run ${{ matrix.script }}
         env:
-          # No paid signing certificates: the Mac app is ad-hoc signed and the Windows installer is unsigned.
-          CSC_IDENTITY_AUTO_DISCOVERY: false
+          # Optional Apple Developer ID signing + notarization. Add these repository secrets to enable it:
+          #   MAC_CERTS (base64 .p12 "Developer ID Application" certificate), MAC_CERTS_PASSWORD,
+          #   APPLE_ID, APPLE_APP_SPECIFIC_PASSWORD, APPLE_TEAM_ID.
+          # Without them the Mac app is ad-hoc signed and the Windows installer is unsigned.
+          CSC_LINK: ${{ matrix.os == 'macos-latest' && secrets.MAC_CERTS || '' }}
+          CSC_KEY_PASSWORD: ${{ matrix.os == 'macos-latest' && secrets.MAC_CERTS_PASSWORD || '' }}
+          CSC_IDENTITY_AUTO_DISCOVERY: ${{ matrix.os == 'macos-latest' && secrets.MAC_CERTS != '' }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
 
       - name: Upload build
         uses: actions/upload-artifact@v4

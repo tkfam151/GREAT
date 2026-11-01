@@ -1,0 +1,22 @@
+HOW TO OPEN BLOCKHAVEN ON YOUR MAC
+==================================
+
+1. Drag Blockhaven into the Applications folder (in this window).
+
+2. Open the Terminal app (Applications > Utilities > Terminal),
+   paste this line, and press Return:
+
+       xattr -cr /Applications/Blockhaven.app
+
+3. Open Blockhaven from Applications or Launchpad as usual.
+
+You only need to do this once per download.
+
+Why? Blockhaven isn't notarized with a paid Apple Developer ID,
+so macOS marks the downloaded copy as "quarantined". The command
+above removes that mark from Blockhaven only. It doesn't change
+any other security settings on your Mac.
+
+Alternative without Terminal: try to open Blockhaven once, then go
+to System Settings > Privacy & Security, scroll down, and click
+"Open Anyway" next to the message about Blockhaven.
